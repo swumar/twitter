@@ -10,7 +10,7 @@
             <input type="submit" value="List users">
         </form>
          <form action="/tweet" method="post">
-            Enter text:<input type="text" name="tweet">
+            Enter text:<input type="text" name="tweet" required>
             <input type="submit" value="Tweet">
           </form>
          <form action="/feed" method="post">
