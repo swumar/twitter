@@ -70,12 +70,10 @@ func (*server) Login(ctx context.Context, request *proto.LoginRequest) (*proto.L
 func (*server) Register(ctx context.Context, request *proto.RegisterRequest) (*proto.RegisterResponse, error) {
 
 	_, usernameExists, ctxErr := repository.ReturnUser(request.Username,ctx)
-
 	if ctxErr != nil{
 		response := &proto.RegisterResponse{Message:"Request timeout. Try again"}
 		return response, nil
 	}
-
 	if usernameExists {
 		response := &proto.RegisterResponse{Message: "User already exists"}
 		return response, nil
@@ -146,9 +144,7 @@ func (*server) Logout(ctx context.Context, request *proto.LogoutRequest) (*proto
 }
 
 func (*server) FollowService(ctx context.Context, request *proto.ProfileRequest) (*proto.ProfileResponse, error) {
-
 	userPresent, _, ctxErr1 := repository.ReturnUser(request.GetReqparm1(),ctx)
-
 	if ctxErr1 != nil{
 		response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
 		return response, nil
