@@ -12,12 +12,12 @@
         <p id="demo">
         </p>
         <form action="/follow" method="post">
-            Email id:<input type="text" name="username">
+            Email id:<input type="text" name="username" required>
             <input type="submit" value="Follow">
         </form>
         <br>
         <form action="/unfollow" method="post">
-            Email id:<input type="text" name="username">
+            Email id:<input type="text" name="username" required>
             <input type="submit" value="Unfollow">
          </form>
          <br>
