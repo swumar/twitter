@@ -4,7 +4,6 @@ import (
 	"backend/model"
 	"context"
 	"encoding/json"
-	//"fmt"
 )
 
 func ReturnUser(username string, ctx context.Context)(model.User, bool, error){
@@ -30,16 +29,16 @@ func ReturnUserDB(username string, resultChan chan model.User, errChan chan bool
 	if geterr != nil{
 		deleteChan <- geterr
 	}else{
-		err:= json.Unmarshal(res,&user)
-		if err != nil{
-			deleteChan <- geterr
+		if string(res) == ""{
+			resultChan <- user
+			errChan <- false
 		}else {
-			if user.Username != ""{
-				resultChan <- user
-				errChan <- true
+			err:= json.Unmarshal(res,&user)
+			if err != nil{
+				deleteChan <- err
 			}else {
 				resultChan <- user
-				errChan <- false
+				errChan <- true
 			}
 		}
 	}

@@ -63,7 +63,7 @@ func GetAll(ctx context.Context) (string,error){
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 	}
-	response, geterr := cli.Get(ctx,"",opts...)
+	response, geterr := cli.Get(ctx,"#",opts...)
 	if geterr != nil {
 		log.Fatal(err)
 		return "",geterr
