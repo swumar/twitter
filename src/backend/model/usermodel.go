@@ -1,7 +1,6 @@
 package model
 
 import (
-	"container/list"
 	"sync"
 )
 
@@ -11,7 +10,7 @@ type User struct {
 	LastName  string `json:"lastname"`
 	Password  string `json:"password"`
 	Token     string `json:"token"`
-	Followers *list.List `json:"followers"`
+	Followers []string `json:"followers"`
 }
 
 var UsersMux = &sync.Mutex{}

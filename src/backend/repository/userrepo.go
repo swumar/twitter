@@ -3,14 +3,14 @@ package repository
 import (
 	"backend/model"
 	"context"
+	"encoding/json"
+	//"fmt"
 )
-
-var Users = make(map[string]model.User)
 
 func ReturnUser(username string, ctx context.Context)(model.User, bool, error){
 	resultChan := make(chan model.User)
 	errChan := make(chan bool)
-	deleteChan := make(chan bool)
+	deleteChan := make(chan error)
 	dummy := new(model.User)
 	dummyUser := *dummy
 	go ReturnUserDB(username,resultChan,errChan,deleteChan,ctx)
@@ -18,128 +18,77 @@ func ReturnUser(username string, ctx context.Context)(model.User, bool, error){
 	select {
 	case res := <-resultChan :
 		return res, <-errChan, nil
-	case <-deleteChan:
-		return dummyUser,false,ctx.Err()
+	case err :=<-deleteChan:
+		return dummyUser,false,err
 	}
 
 }
 
-func ReturnUserDB(username string, resultChan chan model.User, errChan chan bool,deleteChan chan bool, ctx context.Context)  {
-	model.UsersMux.Lock()
-	user, exists := Users[username]
-	select {
-	case <-ctx.Done():
-		model.UsersMux.Unlock()
-		deleteChan <- true
-	default:
-		model.UsersMux.Unlock()
-		resultChan <- user
-		errChan <- exists
+func ReturnUserDB(username string, resultChan chan model.User, errChan chan bool,deleteChan chan error, ctx context.Context)  {
+	var user model.User
+	res,geterr := Get("#"+username,ctx)
+	if geterr != nil{
+		deleteChan <- geterr
+	}else{
+		err:= json.Unmarshal(res,&user)
+		if err != nil{
+			deleteChan <- geterr
+		}else {
+			if user.Username != ""{
+				resultChan <- user
+				errChan <- true
+			}else {
+				resultChan <- user
+				errChan <- false
+			}
+		}
 	}
 }
 
-func SaveUserRegister(user model.User, ctx context.Context)(error){
+func SaveUser(user model.User, ctx context.Context)(error){
 	resultChan := make(chan bool)
-	deleteChan := make(chan bool)
-	go SaveUserRegisterDB(user,resultChan,deleteChan,ctx)
+	deleteChan := make(chan error)
+	go SaveUserDB(user,resultChan,deleteChan,ctx)
 
 	select {
 	case <-resultChan:
 		return nil
-	case <-deleteChan:
-		return ctx.Err()
+	case err := <-deleteChan:
+		return err
 	}
 
 }
 
-func SaveUserRegisterDB(user model.User,resultChan chan bool,deleteChan chan bool,ctx context.Context)  {
-	model.UsersMux.Lock()
-	Users[user.Username] = user
-
-	select {
-	case <-ctx.Done():
-		model.UsersMux.Unlock()
-		channel := make(chan bool)
-		go DeleteUserDB(user,channel)
-		<-channel
-		deleteChan <- true
-	default:
-		model.UsersMux.Unlock()
+func SaveUserDB(user model.User,resultChan chan bool,deleteChan chan error,ctx context.Context)  {
+	value,err := json.Marshal(user)
+	if err != nil{
+		deleteChan <- err
+	}
+	puterr := Put("#"+user.Username,string(value),ctx)
+	if puterr != nil{
+		deleteChan <- puterr
+	}else {
 		resultChan <- true
 	}
-}
-
-func DeleteUserDB(user model.User,resultChan chan bool)  {
-	model.UsersMux.Lock()
-	delete(Users,user.Username)
-	model.UsersMux.Unlock()
-	resultChan <- true
-	return
-}
-
-func SaveUser(user model.User, ctx context.Context, bkpUser model.User)(error){
-	resultChan := make(chan bool)
-	deleteChan := make(chan bool)
-	go SaveUserDB(user,bkpUser,resultChan,deleteChan,ctx)
-
-	select {
-	case <-resultChan:
-		return nil
-	case <-deleteChan:
-		return ctx.Err()
-	}
-
-}
-
-func SaveUserDB(user model.User,bkpUser model.User,resultChan chan bool,deleteChan chan bool,ctx context.Context)  {
-	model.UsersMux.Lock()
-	Users[user.Username] = user
-
-	select {
-	case <-ctx.Done():
-		model.UsersMux.Unlock()
-		channel := make(chan bool)
-		go ModifyUserDB(bkpUser,channel)
-		<-channel
-		deleteChan <- true
-	default:
-		model.UsersMux.Unlock()
-		resultChan <- true
-	}
-}
-
-func ModifyUserDB(user model.User, channel chan bool) {
-	model.UsersMux.Lock()
-	Users[user.Username] = user
-	model.UsersMux.Unlock()
-	channel <- true
 }
 
 func GetUsers(ctx context.Context)(string,error){
 	resultChan := make(chan string)
-	deleteChan := make(chan bool)
+	deleteChan := make(chan error)
 	go GetUsersDB(resultChan,deleteChan,ctx)
 	select {
 	case res := <-resultChan:
 		return res,nil
-	case <-deleteChan:
-		return "",ctx.Err()
+	case err := <-deleteChan:
+		return "",err
 	}
 }
 
-func GetUsersDB(resultChan chan string,deleteChan chan bool, ctx context.Context)  {
-	model.UsersMux.Lock()
-	keys := ""
-	for k := range Users {
-		keys += k + ","
-	}
-	keys = keys[:len(keys)-1]
-	select {
-	case <-ctx.Done():
-		model.UsersMux.Unlock()
-		deleteChan <- true
-	default:
-		model.UsersMux.Unlock()
-		resultChan <- keys
+func GetUsersDB(resultChan chan string,deleteChan chan error, ctx context.Context)  {
+	res,geterr := GetAll(ctx)
+	if geterr != nil{
+		deleteChan <- geterr
+	}else{
+		resultChan <- res
 	}
 }

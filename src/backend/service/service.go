@@ -4,7 +4,6 @@ import (
 	"backend/model"
 	"backend/proto"
 	"backend/repository"
-	"container/list"
 	"context"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -20,7 +19,6 @@ type server struct {
 func (*server) Login(ctx context.Context, request *proto.LoginRequest) (*proto.LoginResponse, error) {
 
 	user, usernameExists, ctxErr := repository.ReturnUser(request.Username,ctx)
-	bkpUser := user
 
 	if ctxErr != nil{
 		response := &proto.LoginResponse{Message:"Request timeout. Try again", Tokenstring: ""}
@@ -50,7 +48,7 @@ func (*server) Login(ctx context.Context, request *proto.LoginRequest) (*proto.L
 
 		user.Token = tokenString
 
-		ctxErr2 := repository.SaveUser(user,ctx,bkpUser)
+		ctxErr2 := repository.SaveUser(user,ctx)
 
 		if ctxErr2 != nil{
 			response := &proto.LoginResponse{Message:"Request timeout. Try again", Tokenstring: ""}
@@ -84,7 +82,7 @@ func (*server) Register(ctx context.Context, request *proto.RegisterRequest) (*p
 		Password:  request.Password,
 		FirstName: request.Firstname,
 		LastName:  request.Lastname,
-		Followers: list.New(),
+		Followers: make([]string,0),
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(registerFromInput.Password), 5)
@@ -94,7 +92,7 @@ func (*server) Register(ctx context.Context, request *proto.RegisterRequest) (*p
 	}
 	registerFromInput.Password = string(hash)
 
-	ctxErr2 := repository.SaveUserRegister(registerFromInput,ctx)
+	ctxErr2 := repository.SaveUser(registerFromInput,ctx)
 
 	if ctxErr2 != nil{
 		response := &proto.RegisterResponse{Message:"Request timeout. Try again"}
@@ -121,7 +119,6 @@ func (*server) Logout(ctx context.Context, request *proto.LogoutRequest) (*proto
 	claims, _ := token.Claims.(jwt.MapClaims)
 	signoutUserName := claims["username"].(string)
 	signoutUser, _, ctxErr := repository.ReturnUser(signoutUserName,ctx)
-	bkpUser := signoutUser
 
 	if ctxErr != nil{
 		response := &proto.LogoutResponse{Message: "Request timeout. Try again"}
@@ -130,7 +127,7 @@ func (*server) Logout(ctx context.Context, request *proto.LogoutRequest) (*proto
 
 	if signoutUser.Username != "" {
 		signoutUser.Token = ""
-		ctxErr2 := repository.SaveUser(signoutUser,ctx,bkpUser)
+		ctxErr2 := repository.SaveUser(signoutUser,ctx)
 		if ctxErr2 != nil{
 			response := &proto.LogoutResponse{Message: "Request timeout. Try again"}
 			return response, nil
@@ -151,29 +148,26 @@ func (*server) FollowService(ctx context.Context, request *proto.ProfileRequest)
 	}
 
 	followUser, _, ctxErr2 := repository.ReturnUser(request.GetReqparm2(),ctx)
-	bkpUser := followUser
 
 	if ctxErr2 != nil{
 		response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
 		return response, nil
 	}
-
-	if userPresent == followUser{
+	if userPresent.Username == followUser.Username{
 		response := &proto.ProfileResponse{Resparm1: "Cant follow yourself"}
 		return response, nil
 	}
 
-	for e := followUser.Followers.Front() ; e != nil ; e = e.Next(){
-		k := e.Value.(model.User)
-		if userPresent == k{
+	for i := 0 ; i < len(followUser.Followers) ; i++{
+		if userPresent.Username == followUser.Followers[i]{
 			response := &proto.ProfileResponse{Resparm1: "User already followed"}
 			return response, nil
 		}
 	}
 
 	if userPresent.Username != "" {
-		followUser.Followers.PushBack(userPresent)
-		ctxErr3 := repository.SaveUser(followUser,ctx,bkpUser)
+		followUser.Followers = append(followUser.Followers,userPresent.Username)
+		ctxErr3 := repository.SaveUser(followUser,ctx)
 		if ctxErr3 != nil{
 			response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
 			return response, nil
@@ -197,14 +191,13 @@ func (*server) UnfollowService(ctx context.Context, request *proto.ProfileReques
 	}
 
 	unfollowUser, _, ctxErr2 := repository.ReturnUser(request.GetReqparm2(),ctx)
-	bkpUser := unfollowUser
 
 	if ctxErr2 != nil{
 		response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
 		return response, nil
 	}
 
-	if userPresent == unfollowUser{
+	if userPresent.Username == unfollowUser.Username{
 		response := &proto.ProfileResponse{Resparm1: "Cant unfollow yourself"}
 		return response, nil
 	}
@@ -213,11 +206,10 @@ func (*server) UnfollowService(ctx context.Context, request *proto.ProfileReques
 		response := &proto.ProfileResponse{Resparm1: "Username doesnt exist"}
 		return response, nil	}
 
-	for e := unfollowUser.Followers.Front() ; e != nil ; e = e.Next(){
-		k := e.Value.(model.User)
-		if userPresent == k{
-			unfollowUser.Followers.Remove(e)
-			ctxErr3 := repository.SaveUser(unfollowUser,ctx,bkpUser)
+	for i := 0 ; i < len(unfollowUser.Followers) ; i++{
+		if userPresent.Username == unfollowUser.Followers[i]{
+			unfollowUser.Followers = append(unfollowUser.Followers[:i],unfollowUser.Followers[i+1:]...)
+			ctxErr3 := repository.SaveUser(unfollowUser,ctx)
 			if ctxErr3 != nil{
 				response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
 				return response, nil
@@ -261,9 +253,8 @@ func (*server) FeedService(ctx context.Context, request *proto.FeedRequest) (*pr
 
 	feed := ""
 
-	for e:= feedUser.Followers.Front(); e != nil; e = e.Next(){
-		followUser := e.Value.(model.User)
-		followUsername := followUser.Username
+	for i := 0 ; i < len(feedUser.Followers); i++{
+		followUsername := feedUser.Followers[i]
 		tweetList, ctxErr2 := repository.GetTweetList(followUsername,ctx)
 		if ctxErr2 != nil{
 			response := &proto.FeedResponse{Resparm1: "Request timeout. Try again",Resparm2: ""}
@@ -317,9 +308,8 @@ func (*server) UserListService(ctx context.Context, request *proto.FeedRequest) 
 		return response, nil
 	}
 
-	for e:= presentUser.Followers.Front(); e != nil; e = e.Next(){
-		followUser := e.Value.(model.User)
-		userNameList += followUser.Username + ","
+	for i:=0 ; i < len(presentUser.Followers); i++{
+		userNameList += presentUser.Followers[i] + ","
 	}
 	if userNameList[len(userNameList)-1] == byte(','){
 		userNameList = userNameList[:len(userNameList)-1]
