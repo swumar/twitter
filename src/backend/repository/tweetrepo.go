@@ -2,12 +2,11 @@ package repository
 
 import (
 	"backend/model"
-	"container/list"
 	"context"
 	"time"
 )
 
-var Tweets = make(map[string]*list.List)
+var Tweets = make(map[string][]string)
 
 func SaveTweet(tweetUser string,tweetContent string,ctx context.Context)(error){
 	resultChan := make(chan bool)
@@ -25,15 +24,15 @@ func SaveTweetDB(tweetUser string,tweetContent string,resultChan chan bool, dele
 	tweetContent += "*"+time.Now().Format("2006-01-02 15:04:05")
 	model.TweetsMux.Lock()
 	if Tweets[tweetUser] == nil{
-		Tweets[tweetUser] = list.New()
+		Tweets[tweetUser] = make([]string,0)
 	}
-	Tweets[tweetUser].PushBack(tweetContent)
+	Tweets[tweetUser] = append(Tweets[tweetUser],tweetContent)
 
 	select {
 	case <-ctx.Done():
 		model.TweetsMux.Unlock()
 		channel := make(chan bool)
-		go DeleteTweetDB(tweetUser,tweetContent,channel)
+		go DeleteTweetDB(tweetUser,channel)
 		<-channel
 		deleteChan <- true
 	default:
@@ -42,21 +41,17 @@ func SaveTweetDB(tweetUser string,tweetContent string,resultChan chan bool, dele
 	}
 }
 
-func DeleteTweetDB(tweetUser string,tweetContent string,resultChan chan bool) {
+func DeleteTweetDB(tweetUser string,resultChan chan bool) {
 	model.TweetsMux.Lock()
-	for e := Tweets[tweetUser].Front(); e != nil ; e = e.Next(){
-		if tweetContent == e.Value{
-			Tweets[tweetUser].Remove(e)
-		}
-	}
+	Tweets[tweetUser] = Tweets[tweetUser][:len(Tweets[tweetUser])-1]
 	model.TweetsMux.Unlock()
 	resultChan <- true
 }
 
-func GetTweetList(followUsername string,ctx context.Context)(*list.List,error) {
-	resultChan := make(chan *list.List)
+func GetTweetList(followUsername string,ctx context.Context)([]string,error) {
+	resultChan := make(chan []string)
 	deleteChan := make(chan bool)
-	dummyList := list.New()
+	dummyList := make([]string,0)
 	go GetTweetListDB(followUsername,resultChan,deleteChan,ctx)
 	select {
 	case res := <-resultChan:
@@ -66,7 +61,7 @@ func GetTweetList(followUsername string,ctx context.Context)(*list.List,error) {
 	}
 }
 
-func GetTweetListDB(followUsername string, resultChan chan *list.List,deleteChan chan bool, ctx context.Context){
+func GetTweetListDB(followUsername string, resultChan chan []string,deleteChan chan bool, ctx context.Context){
 	model.TweetsMux.Lock()
 	tweetList := Tweets[followUsername]
 	select {

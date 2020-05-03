@@ -269,7 +269,7 @@ func (*server) FeedService(ctx context.Context, request *proto.FeedRequest) (*pr
 			response := &proto.FeedResponse{Resparm1: "Request timeout. Try again",Resparm2: ""}
 			return response, nil
 		}
-		if tweetList != nil{
+		if len(tweetList) != 0{
 			feed = feed + GetTopFiveTweets(tweetList,followUsername)
 		}
 	}
@@ -284,12 +284,13 @@ func (*server) FeedService(ctx context.Context, request *proto.FeedRequest) (*pr
 	}
 }
 
-func GetTopFiveTweets(tweetList *list.List,followUsername string)(string){
-	numOfTweets := 5
+func GetTopFiveTweets(tweetList []string,followUsername string)(string){
 	feed := ""
-	for k := tweetList.Back(); k != nil && numOfTweets > 0; k = k.Prev() {
-		numOfTweets = numOfTweets - 1
-		feed = feed + k.Value.(string) + ","
+	if len(tweetList) > 5{
+		tweetList = tweetList[len(tweetList)-5:]
+	}
+	for k := len(tweetList)-1;k >= 0; k-- {
+		feed = feed + tweetList[k] + ","
 	}
 
 	if feed != ""{
