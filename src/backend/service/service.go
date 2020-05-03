@@ -70,7 +70,7 @@ func (*server) Register(ctx context.Context, request *proto.RegisterRequest) (*p
 	_, usernameExists, ctxErr := repository.ReturnUser(request.Username,ctx)
 	if ctxErr != nil{
 		response := &proto.RegisterResponse{Message:"Request timeout. Try again"}
-		return response, nil
+		return response, ctxErr
 	}
 	if usernameExists {
 		response := &proto.RegisterResponse{Message: "User already exists"}
@@ -96,7 +96,7 @@ func (*server) Register(ctx context.Context, request *proto.RegisterRequest) (*p
 
 	if ctxErr2 != nil{
 		response := &proto.RegisterResponse{Message:"Request timeout. Try again"}
-		return response, nil
+		return response, ctxErr2
 	}
 
 	response := &proto.RegisterResponse{Message: "",}
@@ -122,7 +122,7 @@ func (*server) Logout(ctx context.Context, request *proto.LogoutRequest) (*proto
 
 	if ctxErr != nil{
 		response := &proto.LogoutResponse{Message: "Request timeout. Try again"}
-		return response, nil
+		return response, ctxErr
 	}
 
 	if signoutUser.Username != "" {
@@ -130,7 +130,7 @@ func (*server) Logout(ctx context.Context, request *proto.LogoutRequest) (*proto
 		ctxErr2 := repository.SaveUser(signoutUser,ctx)
 		if ctxErr2 != nil{
 			response := &proto.LogoutResponse{Message: "Request timeout. Try again"}
-			return response, nil
+			return response, ctxErr2
 		}
 		response := &proto.LogoutResponse{Message: ""}
 		return response, nil
@@ -144,14 +144,14 @@ func (*server) FollowService(ctx context.Context, request *proto.ProfileRequest)
 	userPresent, _, ctxErr1 := repository.ReturnUser(request.GetReqparm1(),ctx)
 	if ctxErr1 != nil{
 		response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
-		return response, nil
+		return response, ctxErr1
 	}
 
 	followUser, _, ctxErr2 := repository.ReturnUser(request.GetReqparm2(),ctx)
 
 	if ctxErr2 != nil{
 		response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
-		return response, nil
+		return response, ctxErr2
 	}
 	if userPresent.Username == followUser.Username{
 		response := &proto.ProfileResponse{Resparm1: "Cant follow yourself"}
@@ -170,7 +170,7 @@ func (*server) FollowService(ctx context.Context, request *proto.ProfileRequest)
 		ctxErr3 := repository.SaveUser(followUser,ctx)
 		if ctxErr3 != nil{
 			response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
-			return response, nil
+			return response, ctxErr3
 		}
 		response := &proto.ProfileResponse{Resparm1: ""}
 		return response, nil
@@ -187,14 +187,14 @@ func (*server) UnfollowService(ctx context.Context, request *proto.ProfileReques
 
 	if ctxErr1 != nil{
 		response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
-		return response, nil
+		return response, ctxErr1
 	}
 
 	unfollowUser, _, ctxErr2 := repository.ReturnUser(request.GetReqparm2(),ctx)
 
 	if ctxErr2 != nil{
 		response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
-		return response, nil
+		return response, ctxErr2
 	}
 
 	if userPresent.Username == unfollowUser.Username{
@@ -212,7 +212,7 @@ func (*server) UnfollowService(ctx context.Context, request *proto.ProfileReques
 			ctxErr3 := repository.SaveUser(unfollowUser,ctx)
 			if ctxErr3 != nil{
 				response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
-				return response, nil
+				return response, ctxErr3
 			}
 			response := &proto.ProfileResponse{Resparm1: ""}
 			return response, nil
@@ -232,7 +232,7 @@ func (*server) TweetService(ctx context.Context, request *proto.ProfileRequest) 
 		ctxErr := repository.SaveTweet(tweetUser,tweetContent,ctx)
 		if ctxErr != nil{
 			response := &proto.ProfileResponse{Resparm1: "Request timeout. Try again"}
-			return response, nil
+			return response, ctxErr
 		}
 		response := &proto.ProfileResponse{Resparm1: ""}
 		return response, nil
@@ -248,7 +248,7 @@ func (*server) FeedService(ctx context.Context, request *proto.FeedRequest) (*pr
 
 	if ctxErr1 != nil{
 		response := &proto.FeedResponse{Resparm1: "Request timeout. Try again",Resparm2: ""}
-		return response, nil
+		return response, ctxErr1
 	}
 
 	feed := ""
@@ -258,7 +258,7 @@ func (*server) FeedService(ctx context.Context, request *proto.FeedRequest) (*pr
 		tweetList, ctxErr2 := repository.GetTweetList(followUsername,ctx)
 		if ctxErr2 != nil{
 			response := &proto.FeedResponse{Resparm1: "Request timeout. Try again",Resparm2: ""}
-			return response, nil
+			return response, ctxErr2
 		}
 		if len(tweetList) != 0{
 			feed = feed + GetTopFiveTweets(tweetList,followUsername)
@@ -298,14 +298,14 @@ func (*server) UserListService(ctx context.Context, request *proto.FeedRequest) 
 
 	if ctxErr1 != nil{
 		response := &proto.FeedResponse{Resparm1: "Request timeout. Try again",Resparm2: ""}
-		return response, nil
+		return response, ctxErr1
 	}
 	userNameList += "$"
 	presentUser, _, ctxErr2 := repository.ReturnUser(request.GetReqparm1(),ctx)
 
 	if ctxErr2 != nil{
 		response := &proto.FeedResponse{Resparm1: "Request timeout. Try again",Resparm2: ""}
-		return response, nil
+		return response, ctxErr2
 	}
 
 	for i:=0 ; i < len(presentUser.Followers); i++{

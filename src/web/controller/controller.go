@@ -41,18 +41,26 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		r.ParseForm()
 		request := &proto.RegisterRequest{Firstname: r.Form["firstname"][0], Lastname:r.Form["lastname"][0], Username:r.Form["username"][0], Password:r.Form["password"][0]}
-		response, _ := client.Register(context.Background(), request)
-
-		if response.Message != "" {
-			m["Error"] = response.Message
-			log.Println(response.Message)
+		ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+		response, err := client.Register(ctx, request)
+		if err!= nil{
+			m["Error"] = "Request timeout"
+			log.Println("Request timeout")
 			t.Execute(w, m)
 			return
-		} else {
-			log.Println("User Registered succesfully")
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
+		}else{
+			if response.Message != "" {
+				m["Error"] = response.Message
+				log.Println(response.Message)
+				t.Execute(w, m)
+				return
+			} else {
+				log.Println("User Registered succesfully")
+				http.Redirect(w, r, "/login", http.StatusFound)
+				return
+			}
 		}
+
 	}
 }
 
@@ -87,22 +95,30 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		r.ParseForm()
 		request := &proto.LoginRequest{Username: r.Form["username"][0], Password: r.Form["password"][0]}
-		response , _ := client.Login(context.Background(), request)
-
-		if response.Message != "" {
-			m["Error"] = response.Message
-			log.Println(response.Message)
+		ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+		response, err := client.Login(ctx, request)
+		if err!= nil{
+			m["Error"] = "Request timeout"
+			log.Println("Request timeout")
 			t.Execute(w, m)
 			return
-		} else {
-			http.SetCookie(w, &http.Cookie{
-				Name:  "token",
-				Value: response.Tokenstring,
-			})
-			log.Println("Login successful")
-			http.Redirect(w, r, "/feed", http.StatusFound)
-			return
+		}else{
+			if response.Message != "" {
+				m["Error"] = response.Message
+				log.Println(response.Message)
+				t.Execute(w, m)
+				return
+			} else {
+				http.SetCookie(w, &http.Cookie{
+					Name:  "token",
+					Value: response.Tokenstring,
+				})
+				log.Println("Login successful")
+				http.Redirect(w, r, "/feed", http.StatusFound)
+				return
+			}
 		}
+
 	}
 }
 
@@ -139,25 +155,33 @@ func SignoutHandler(w http.ResponseWriter, r *http.Request) {
 	client := proto.NewTwitterClient(cc)
 
 	request := &proto.LogoutRequest{Tokenstring: tokenString}
-
-	response, _ := client.Logout(context.Background(), request)
-
-	if response.Message != "" {
-		m["Error"] = response.Message
-		m["Success"] = nil
-		log.Println(response.Message)
-		t.Execute(w, m)
+	ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+	response, err := client.Logout(ctx, request)
+	if err!= nil{
+		m["Error"] = "Request timeout"
+		log.Println("Request timeout")
+		tk, _ := template.ParseFiles("../static/profile.gtpl")
+		tk.Execute(w, m)
 		return
-	} else {
-		http.SetCookie(w, &http.Cookie{
-			Name:    "token",
-			Value:   "",
-			Expires: time.Unix(0, 0),
-		})
-		log.Println("Logout successful")
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
+	}else{
+		if response.Message != "" {
+			m["Error"] = response.Message
+			m["Success"] = nil
+			log.Println(response.Message)
+			t.Execute(w, m)
+			return
+		} else {
+			http.SetCookie(w, &http.Cookie{
+				Name:    "token",
+				Value:   "",
+				Expires: time.Unix(0, 0),
+			})
+			log.Println("Logout successful")
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
 	}
+
 }
 
 func redirectToLogin(w http.ResponseWriter){
@@ -212,23 +236,31 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	client := proto.NewTwitterClient(cc)
 
 	request := &proto.FeedRequest{Reqparm1 : feedUserUsername}
-	response, _ := client.UserListService(context.Background(),request)
-
-	if response.GetResparm1() != "" {
-		m["Error"] = response.GetResparm1()
-		m["Success"] = nil
-		m["List"] = nil
-		log.Println(response.GetResparm1())
+	ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+	response, err := client.UserListService(ctx, request)
+	if err!= nil{
+		m["Error"] = "Request timeout"
+		log.Println("Request timeout")
 		t.Execute(w, m)
 		return
-	}else {
-		m["Error"] = nil
-		m["Success"] = nil
-		m["List"] = response.GetResparm2()
-		log.Println("User List Succesfull")
-		t.Execute(w, m)
-		return
+	}else{
+		if response.GetResparm1() != "" {
+			m["Error"] = response.GetResparm1()
+			m["Success"] = nil
+			m["List"] = nil
+			log.Println(response.GetResparm1())
+			t.Execute(w, m)
+			return
+		}else {
+			m["Error"] = nil
+			m["Success"] = nil
+			m["List"] = response.GetResparm2()
+			log.Println("User List Succesfull")
+			t.Execute(w, m)
+			return
+		}
 	}
+
 }
 
 func FollowHandler(w http.ResponseWriter, r *http.Request) {
@@ -270,21 +302,29 @@ func FollowHandler(w http.ResponseWriter, r *http.Request) {
 	client := proto.NewTwitterClient(cc)
 
 	request := &proto.ProfileRequest{Reqparm1 : userPresentUsername, Reqparm2: followuserUsername}
-	response, _ := client.FollowService(context.Background(),request)
-
-	if response.GetResparm1() != "" {
-		m["Error"] = response.GetResparm1()
-		m["Success"] = nil
-		log.Println(response.GetResparm1())
+	ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+	response, err := client.FollowService(ctx, request)
+	if err!= nil{
+		m["Error"] = "Request timeout"
+		log.Println("Request timeout")
 		t.Execute(w, m)
 		return
-	}else {
-		m["Error"] = nil
-		m["Success"] = "Succesfully followed"
-		log.Println("Succesfully followed")
-		t.Execute(w, m)
-		return
+	}else{
+		if response.GetResparm1() != "" {
+			m["Error"] = response.GetResparm1()
+			m["Success"] = nil
+			log.Println(response.GetResparm1())
+			t.Execute(w, m)
+			return
+		}else {
+			m["Error"] = nil
+			m["Success"] = "Succesfully followed"
+			log.Println("Succesfully followed")
+			t.Execute(w, m)
+			return
+		}
 	}
+
 }
 
 func UnfollowHandler(w http.ResponseWriter, r *http.Request) {
@@ -326,21 +366,29 @@ func UnfollowHandler(w http.ResponseWriter, r *http.Request) {
 	client := proto.NewTwitterClient(cc)
 
 	request := &proto.ProfileRequest{Reqparm1 : userPresentUsername, Reqparm2: unfollowuserUsername}
-	response, _ := client.UnfollowService(context.Background(),request)
-
-	if response.GetResparm1() != "" {
-		m["Error"] = response.GetResparm1()
-		m["Success"] = nil
-		log.Println(response.GetResparm1())
+	ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+	response, err := client.UnfollowService(ctx, request)
+	if err!= nil{
+		m["Error"] = "Request timeout"
+		log.Println("Request timeout")
 		t.Execute(w, m)
 		return
-	}else {
-		m["Error"] = nil
-		m["Success"] = "Succesfully unfollowed"
-		log.Println("Succesfully unfollowed")
-		t.Execute(w, m)
-		return
+	}else{
+		if response.GetResparm1() != "" {
+			m["Error"] = response.GetResparm1()
+			m["Success"] = nil
+			log.Println(response.GetResparm1())
+			t.Execute(w, m)
+			return
+		}else {
+			m["Error"] = nil
+			m["Success"] = "Succesfully unfollowed"
+			log.Println("Succesfully unfollowed")
+			t.Execute(w, m)
+			return
+		}
 	}
+
 }
 
 func TweetHandler(w http.ResponseWriter, r *http.Request) {
@@ -382,21 +430,29 @@ func TweetHandler(w http.ResponseWriter, r *http.Request) {
 	client := proto.NewTwitterClient(cc)
 
 	request := &proto.ProfileRequest{Reqparm1 : tweetContent, Reqparm2: tweetUserUsername}
-	response, _ := client.TweetService(context.Background(),request)
-
-	if response.GetResparm1() != "" {
-		m["Error"] = response.GetResparm1()
-		m["Success"] = nil
-		log.Println(response.GetResparm1())
+	ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+	response, err := client.TweetService(ctx, request)
+	if err!= nil{
+		m["Error"] = "Request timeout"
+		log.Println("Request timeout")
 		t.Execute(w, m)
 		return
-	}else {
-		m["Error"] = nil
-		m["Success"] = "Succesfully tweeted"
-		log.Println("Succesfully tweeted")
-		t.Execute(w, m)
-		return
+	}else{
+		if response.GetResparm1() != "" {
+			m["Error"] = response.GetResparm1()
+			m["Success"] = nil
+			log.Println(response.GetResparm1())
+			t.Execute(w, m)
+			return
+		}else {
+			m["Error"] = nil
+			m["Success"] = "Succesfully tweeted"
+			log.Println("Succesfully tweeted")
+			t.Execute(w, m)
+			return
+		}
 	}
+
 }
 
 func FeedHandler(w http.ResponseWriter, r *http.Request) {
@@ -432,20 +488,28 @@ func FeedHandler(w http.ResponseWriter, r *http.Request) {
 	client := proto.NewTwitterClient(cc)
 
 	request := &proto.FeedRequest{Reqparm1 : feedUserUsername}
-	response, _ := client.FeedService(context.Background(),request)
-
-	if response.GetResparm1() != "" {
-		m["Error"] = response.GetResparm1()
-		m["Success"] = nil
-		log.Println(response.GetResparm1())
+	ctx,_ := context.WithTimeout(context.Background(),5*time.Second)
+	response, err := client.FeedService(ctx, request)
+	if err!= nil{
+		m["Error"] = "Request timeout"
+		log.Println("Request timeout")
 		t.Execute(w, m)
 		return
-	}else {
-		m["Error"] = nil
-		m["Success"] = nil
-		m["Feed"] = response.GetResparm2()
-		log.Println("Feed Succesfull")
-		t.Execute(w, m)
-		return
+	}else{
+		if response.GetResparm1() != "" {
+			m["Error"] = response.GetResparm1()
+			m["Success"] = nil
+			log.Println(response.GetResparm1())
+			t.Execute(w, m)
+			return
+		}else {
+			m["Error"] = nil
+			m["Success"] = nil
+			m["Feed"] = response.GetResparm2()
+			log.Println("Feed Succesfull")
+			t.Execute(w, m)
+			return
+		}
 	}
+
 }

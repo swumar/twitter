@@ -13,12 +13,12 @@ func Put(key string,value string,ctx context.Context) error{
 		Endpoints: []string{"localhost:2379", "localhost:22379", "localhost:32379"},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	defer cli.Close()
 	_, puterr := cli.Put(ctx, key, value)
 	if puterr != nil {
-		log.Fatal(err)
+		log.Println(puterr)
 		return puterr
 	}else {
 		return nil
@@ -32,13 +32,12 @@ func Get(key string,ctx context.Context) ([]byte,error){
 		Endpoints: []string{"localhost:2379", "localhost:22379", "localhost:32379"},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	defer cli.Close()
-
 	response, geterr := cli.Get(ctx, key)
 	if geterr != nil {
-		log.Fatal(err)
+		log.Println(geterr)
 		return []byte(""),geterr
 	}else {
 		if len(response.Kvs) == 0{
@@ -46,7 +45,6 @@ func Get(key string,ctx context.Context) ([]byte,error){
 		}else{
 			return response.Kvs[0].Value,nil
 		}
-
 	}
 
 }
@@ -57,7 +55,7 @@ func GetAll(ctx context.Context) (string,error){
 		Endpoints: []string{"localhost:2379", "localhost:22379", "localhost:32379"},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	defer cli.Close()
 	opts := []clientv3.OpOption{
@@ -65,7 +63,7 @@ func GetAll(ctx context.Context) (string,error){
 	}
 	response, geterr := cli.Get(ctx,"#",opts...)
 	if geterr != nil {
-		log.Fatal(err)
+		log.Println(geterr)
 		return "",geterr
 	}else {
 		ans := ""
