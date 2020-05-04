@@ -132,16 +132,16 @@ func TestSaveUserContext(t *testing.T) {
 		cancel()
 		err := SaveUser(user,ctx)
 		if err == nil {
-			t.Error("User added succesfully")
+			t.Error("User added successfully")
 		}
 	}()
 	wg.Wait()
 	res,_ := GetAll(context.Background())
 	if len(res) == 0{
-		t.Log("Test SaveUserContext succesful")
+		t.Log("Test SaveUserContext successful")
 	}else {
 		t.Log(res)
-		t.Error("Test SaveUserContext unsucessful")
+		t.Error("Test SaveUserContext unsuccessful")
 	}
 
 }
