@@ -1,38 +1,51 @@
-## Change log v1.2:
+## Change log v1.3:
 
-1.Making the webpage service stateless(monolith service)
+1.Replacing storage with raft storage
 
-2.Changes from feedback of part 1:
+2.Adding test cases for new storage
+
+3.Changes from feedback of part 2:
     
-	a) Vendoring dependencies
-	b) Added unfollow feature
-	c) Splitting code into business logic, repository and storage
-	d) Using log instead of printf statements
-	e) Updated test cases
-	f) UI changes:
+	a) Seperation of code into backend and web modules
+	b) Adding context cancel test cases
+	c) UI changes:
 	
-		1)Access to login/register page after login redirects to home page
-		2)Displaying feed as table
+		1)Creating a new page to follow/unfollow users along with list of all users and followed users
 
 ## Note:
 
-Due to the limited availability of time after receiving the feedback other UI changes suggested in Part 1 feedback are work in progress and will be fixed in Part 3
-
-A reminder to update the scores in Part 2 as the testcases(-15) and feature(-5) have been fixed
-
-## Cloning the repo:
-
-git clone https://github.com/Distributed-Systems-CSGY9223/uf247-up293-final-project.git -b rpc-call
-
-export GOPATH=$HOME/uf247-up293-final-project
+A reminder to update the scores for Part2  as the code seperation(-10) have been fixed
 
 ## Execution:
 
-cd uf247-up293-final-project/src
+Terminal 1:
 
-go run web.go
+	git clone https://github.com/Distributed-Systems-CSGY9223/uf247-up293-final-project.git -b raft5
+	export GOPATH=$HOME/uf247-up293-final-project
+	cd uf247-up293-final-project/src/web/main
+	go run web.go
 
-go run auth/service/service.go (Run in a different terminal)
+Terminal 2:
+
+	export GOPATH=$HOME/uf247-up293-final-project
+	cd uf247-up293-final-project/src/backend/service
+	go run service.go
+
+Terminal 3:
+
+	export GOPATH=$HOME/uf247-up293-final-project
+	cd uf247-up293-final-project/src/go.etcd.io/etcd
+	export PATH=$GOPATH/src/go.etcd.io/etcd/bin:$PATH
+	goreman start
+
+Terminal 4:
+
+	export GOPATH=$HOME/uf247-up293-final-project
+	cd uf247-up293-final-project/src/go.etcd.io/etcd
+	export PATH=$GOPATH/src/go.etcd.io/etcd/bin:$PATH
+	goreman run stop etcd1 (to stop a node)
+	goreman run restart etcd1 (to restart a node)
+	goreman run status(to see status of each node)
 
 Open http://localhost:8000/ on a browser (client)
 
@@ -48,32 +61,31 @@ Functionality:
         
 ## Test cases:
 
-repo_test.go:
+Execution:
 
-    cd auth/repository
+    cd backend/repository
     go test -v
     go test -v - race
         
- Testcases:
+ raft_userrepo_test.go:
  
-    TestSaveUserRegister
-    TestSaveUserRegisterContext
+    TestSaveUser
     TestSaveUserContext
+    TestReturnUserContext
     TestReturnUser
+    TestGetUsers
+    TestGetUsersContext
  
- repo_test.go:
- 
-    cd ../../profile/repository
-    go test -v
-    go test -v -race
-        
- Testcases:
+ raft_tweetrepo_test.go:
  
     TestSaveTweet
     TestSaveTweetContext
     TestGetTweetList
+    TestGetTweetListContext
         
  ## Note:
+ 
+ The config file for raft cluster is in src/go.etcd.io/etcd/Procfile
  
  Cookie is destroyed only after signout(no timer) and token is cleared.
  
