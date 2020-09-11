@@ -2,6 +2,10 @@
 
 Twitter-like distributed and stateless web application (scalable) with microservices that communicate with the webserver via gRPC. The services persist their state in a raft replicated data store to provide consistency. The services include login, logout, register, follow user, unfollow user, tweet and profile dashboard. The raft cluster has three nodes and we can observe that the application runs only when majority(two) of the nodes are running.
 
+## Pre-requisites:
+
+	Go-lang
+
 ## Execution:
 
 Terminal 1:
